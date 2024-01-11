@@ -1,0 +1,49 @@
+
+---
+- hosts: tag_Name_feedNormalizer_servers_2
+  become: yes  
+
+  vars:
+    feed_normalizer_git_tag: "{{ feedNormalizer_git_tag }}"
+    sports:
+      - Volleyball
+      - Basketball
+      - Baseball
+
+  tasks:
+    - name: Ensure required packages are installed
+      yum:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - python3
+        - python3-pip
+      become: yes
+
+    - name: Fetch Feed Normalizer code from Git using the provided tag
+      git:
+        repo: https://github.com/888Spectate/feed-normalizer/repo.git
+        dest: /opt/feed-normalizer
+        version: "{{ feedNormalizer_git_tag }}"
+      become: yes
+
+    - name: Configure Feed Normalizer based on sports
+      template:
+        src: "config_{{ item }}.yml"
+        dest: "/opt/feed-normalizer/config_{{ item }}.yml"
+      loop: "{{ sports }}"
+      become: yes
+
+    - name: Configure and start Feed Normalizer service
+      systemd:
+        name: feed-normalizer
+        state: started
+        enabled: yes
+      become: yes
+
+  handlers:
+    - name: Reload Feed Normalizer
+      systemd:
+        name: feed-normalizer
+        state: reloaded
+      become: yes
