@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: Frontend_Ingress
+  namespace: Staging
+  annotations:
+    kubernetes.io/ingress.class: "alb"
+    alb.ingress.kubernetes.io/scheme: "internet-facing"  
+    alb.ingress.kubernetes.io/target-type: "ip" 
+    alb.ingress.kubernetes.io/load-balancer-attributes: "key=value,arn:aws:elasticloadbalancing:alb-arn"
+spec:
+  rules:
+    - host: event.service.com
+      http:
+        paths:
+          - path: /*
+            backend:
+              service:
+                name: Event
+                port:
+                  number: 81
