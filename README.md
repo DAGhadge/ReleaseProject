@@ -3,7 +3,7 @@
 ## Architecture
 ![image](https://github.com/DAGhadge/888SpectateReleaseProject/assets/37247362/802ed060-3880-4807-89fb-310d4a9699d9)
 
-![image](https://github.com/DAGhadge/888SpectateReleaseProject/assets/37247362/268dcddc-3319-4703-9cd5-886c7ba864e3)
+![image](https://github.com/DAGhadge/888SpectateReleaseProject/assets/37247362/053e7de2-e2f8-4cb0-a298-59b11af65e8b)
 
 
 
