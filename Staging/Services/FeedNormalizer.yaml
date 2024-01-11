@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: feedNormalizer
+spec:
+  selector:
+    app: FeedNormalizer
+  ports:
+    - protocol: TCP
+      port: 82
+      targetPort: 82
+  type: LoadBalancer
