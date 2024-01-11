@@ -1,0 +1,58 @@
+pipeline {
+    agent any
+
+    environment {
+        EKS_CLUSTER_NAME = "we can put our eks cluster-name"
+        NAMESPACE = "staging"
+    }
+
+    stages {
+        stage('Rolling Deploy Event Service') {
+            steps {
+                script {
+                    sh "kubectl apply -f ./Deployments/Event_Service_deploy.yaml --namespace=${NAMESPACE} --kubeconfig=kubeconfig"
+                }
+            }
+        }
+
+        stage('Rolling Deploy Feed Normalizer Service') {
+            steps {
+                script {
+                    sh "kubectl apply -f ./Deployments/FeedNormalizer_deploy.yaml --namespace=${NAMESPACE} --kubeconfig=kubeconfig"
+                }
+            }
+        }
+
+        stage('Rolling Deploy Frontend Service') {
+            steps {
+                script {
+                    sh "kubectl apply -f ./Deployments/Frontend_deploy.yaml --namespace=${NAMESPACE} --kubeconfig=kubeconfig"
+                }
+            }
+        }
+
+        stage('Monitor Update') {
+            steps {
+                script {
+                    sh "kubectl rollout status ./Deployment/Event_Service_deploy.yaml --namespace=${NAMESPACE} --kubeconfig=kubeconfig"
+                    sh "kubectl rollout status ./Deployment/FeedNormalizer_deploy.yaml --namespace=${NAMESPACE} --kubeconfig=kubeconfig"
+                    sh "kubectl rollout status ./Deployment/Frontend_deploy.yaml --namespace=${NAMESPACE} --kubeconfig=kubeconfig"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployment Successful!"
+        }
+        failure {
+            echo "Deployment Failed. Rolling back..."
+            script {
+               sh "kubectl rollout undo ./Deployment/Event_Service_deploy.yaml --namespace=${NAMESPACE} --kubeconfig=kubeconfig"
+               sh "kubectl rollout undo ./Deployment/FeedNormalizer_deploy.yaml --namespace=${NAMESPACE} --kubeconfig=kubeconfig"
+               sh "kubectl rollout undo ./Deployment/Frontend_deploy.yaml --namespace=${NAMESPACE} --kubeconfig=kubeconfig"
+            }
+        }
+    }
+}
