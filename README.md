@@ -1,6 +1,8 @@
-# 888SpectateReleaseProject
+# 888Spectate Release Project
 
 ## Architecture
+![image](https://github.com/DAGhadge/888SpectateReleaseProject/assets/37247362/802ed060-3880-4807-89fb-310d4a9699d9)
+
 
 Architecture flow
 1. The internet-facing Application Load Balancer (ALB) directs user traffic to the Frontend Service, which is integrated with the reader endpoint of the Aurora Database. Two target groups are set up for the old and new versions of the Frontend Service. Initially, 100% of the traffic is routed to the old version (Blue Deployment) using load balancer weight routing. The deployment of the new Frontend version (Green Deployment) is orchestrated through the ansible playbook frontendDeploy.yaml.
