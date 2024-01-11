@@ -1,4 +1,4 @@
-# 888Spectate Release Project
+# Release Engineering Project
 
 ## Architecture
 ![image](https://github.com/DAGhadge/888SpectateReleaseProject/assets/37247362/802ed060-3880-4807-89fb-310d4a9699d9)
