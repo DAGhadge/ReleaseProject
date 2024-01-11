@@ -33,6 +33,7 @@ The deployment strategy employed in this scenario is Blue/Green Deployment, with
    - Switches traffic for all ALBs (Frontend, Feed Normalizer, and Event Management) from Blue (old) Deployment to Green (new) Deployment.
    - The pipeline consists of multiple stages targeting each service ALB, allowing parallel execution to ensure a smooth transition from blue to green.
 4. Rollback Pipeline:-
-- 
+- The Rollback pipeline will include the traffic routing shifting from all the green deployments to the stable deployments again. 
+
 This approach ensures a controlled and validated deployment process with manual verification steps before finalizing the switch to the new version.
 
