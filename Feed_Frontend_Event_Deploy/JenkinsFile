@@ -1,0 +1,127 @@
+pipeline {
+  agent {
+    docker {
+      image 'ReleaseTeam/services-agent:v1'                 //Isolating Distributed Builds
+      args '--user root -v /var/run/docker.sock:/var/run/docker.sock' 
+    }
+  }
+  stages
+  {
+
+    //Deploy the Frontend on EC2 Instances using Weighted Load Balancer
+    stage('Frontend Service') //Ec2 Instances ALB - ASG - Git Tag
+    {
+        environment{
+            GIT_TAG = "v1.0.0"
+        }
+        steps
+        {   
+            script
+            {
+            ansiblePlaybook playbook: 'ansible/deploy-frontend-service.yml', inventory: 'ansible/inventory/production', extraVars: [frontend_git_tag: GIT_TAG]
+            }
+        }
+        post {
+        failure {
+            echo "Pipeline failed!"
+            mail body: “Deployment of Frontend Failed" to: “releaseTeam@888Spectate.com” subject: “Frontend Deployment failed"
+
+            }
+         }
+    }
+    stage('Event Management Service') // Containerized application - Image tag - ECS deployment - ASG
+    {
+        environment
+        {
+            DOCKER_REGISTRY_CREDENTIALS = credentials('docker-registry-crdentials-id')
+            IMAGE_TAG = "EventManagement:latest"
+        }
+        steps
+        {
+            script
+            {
+            def NEW_TASK_DEFINITION = "TaskNEW"
+
+            def CONTAINER_NAME = "feed-normalizer-container"
+            //Provisiong new task definition to be used by the new service deployed
+            sh '''
+            
+            aws ecs register-task-definition --family "DGNEW" 
+            --cpu 512 --memory 1024  
+            --requires-compatibilities FARGATE 
+            --network-mode awsvpc 
+            --container-definitions '[{"name": "${CONTAINER_NAME}","image": "EventManagement:latest","essential": true,"portMappings": [{"containerPort": 80,"hostPort": 80}]}]'
+
+            '''            
+
+            // VPC and subnet configurations
+            def VPC_ID = "vpc-id"
+            def SUBNET_1 = "subnet-config"
+            def SUBNET_2 = "subnet-configured"
+
+            // Security group configuration
+            def SECURITY_GROUP_ID = "security-group-id"
+
+            // Create a new target group for the new version
+            def NEW_TARGET_GROUP_NAME = "new_target_group"
+            def NEW_TARGET_GROUP_ARN = sh(script: "aws elbv2 create-target-group --name ${NEW_TARGET_GROUP_NAME} --protocol HTTP --port 80 --vpc-id ${VPC_ID} --target-type ip  --health-check-path /healthcheck --query 'TargetGroups[0].TargetGroupArn' --output text", returnStdout: true).trim()
+
+            def ALB_ARN="alb"
+            def NEW_TARGET_GROUP_ARN="arn:aws:elasticloadbalancing:us-east-1:631822528518:targetgroup/your-new-target-group/90158111c3835956"
+
+            sh "aws elbv2 register-targets --target-group-arn ${NEW_TARGET_GROUP_ARN} --targets Id=i-0123456789abcdef0"
+
+            // Create a new ECS service with Fargate launch type
+            sh "aws ecs create-service 
+            --cluster arn:aws:ecs:us-east-1:631822528518:cluster/DCluster 
+            --service-name DG --task-definition ${NEW_TASK_DEFINITION} 
+            --desired-count 2 
+            --launch-type FARGATE 
+            --platform-version LATEST 
+            --network-configuration "awsvpcConfiguration={subnets=[$SUBNET_1,$SUBNET_2],securityGroups=[$SECURITY_GROUP_ID],assignPublicIp=DISABLED}" 
+            --load-balancers targetGroupArn=arn:aws:elasticloadbalancing:us-east-1:631822528518:targetgroup/your-new-target-group/90158111c3835956,containerName=nginxdemos-hello,containerPort=80"
+
+            }
+        }
+        post {
+        failure {
+            echo "Pipeline failed!"
+            mail body: “Deployment of Event Failed" to: “releaseTeam@888Spectate.com” subject: “Event Deployment failed"
+
+            }
+         }
+    }
+    stage('Feed Normalizer') // Vanilla Python Application Git Tag - 
+    {
+        environment{
+            FEED_NORMALIZER_GIT_TAG = "v1.2.2"
+        }
+        steps
+        {
+            script 
+            {
+                 ansiblePlaybook playbook: 'ansible/deploy-feedNormalizer-service.yml', inventory: 'ansible/inventory/production', extraVars: [feedNormalizer_git_tag: FEED_NORMALIZER_GIT_TAG]
+                 ansiblePlaybook playbook: 'ansible/deploy-feedNormalizer-service-2.yml', inventory: 'ansible/inventory/production', extraVars: [feedNormalizer_git_tag: FEED_NORMALIZER_GIT_TAG]
+                 ansiblePlaybook playbook: 'ansible/deploy-feedNormalizer-service-3.yml', inventory: 'ansible/inventory/production', extraVars: [feedNormalizer_git_tag: FEED_NORMALIZER_GIT_TAG]
+
+
+            }
+        }
+        post {
+        failure {
+            echo "Pipeline failed!"
+            mail body: “Deployment of Feed Normalizer Failed" to: “releaseTeam@888Spectate.com” subject: “Deployment of Feed Normalizer failed"
+
+            }
+         }
+
+    }  
+  }
+    post
+    {
+        success
+        {
+            mail body: “Deployment Succesful” to: “releaseTeam@888Spectate.com” subject: “Build successful”	
+        }
+    }
+}
