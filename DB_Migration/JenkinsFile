@@ -1,0 +1,66 @@
+pipeline {
+  agent {
+    docker {
+      image 'ReleaseTeam/Database-agent:v1'             //Isolating Distributed Builds
+      args '--user root -v /var/run/docker.sock:/var/run/docker.sock' 
+    }
+  }
+  stages
+  {
+
+    stage('GIT Checkout')
+    {
+        environment{
+            GITREPO = 'v1.2.0'
+        }
+        steps
+        {
+            script
+            {
+                checkout poll: false, 
+                scm: scmGit(branches: [[name: "refs/tag/$GITREPO"]], 
+                extensions: [], 
+                userRemoteConfigs: [[credentialsId: 'c53ce821-d6d0-4f19-b56d-c4555b1658e4', 
+                url: 'https://github.com/888spectate/repo.git']])
+            }
+        }
+        post {
+        failure {
+            echo "Pipeline failed!"
+           mail body: "Gitcheckout Failed" to: "releaseTeam@888Spectate.com" subject: "Git checkoutfailed"
+
+                 }
+        }
+
+    }
+    
+    stage('Database Migrations')    //Aurora DB Cluster.
+    {
+        steps
+        {
+            script
+            {
+                sh '''
+                cd ./Backend/prisma
+                npx prisma migrate deploy
+                '''
+            }
+        }
+        post {
+        failure {
+            echo "Pipeline failed!"
+           mail body: "DB migration Failed" to: "releaseTeam@888Spectate.com" subject: "DB migration failed"
+            }
+         }
+    }
+    post
+    {
+        success
+        {
+            mail body: "DB migration successful" to: "releaseTeam@888Spectate.com" subject: "DB migration success"
+
+        }
+    }
+}
+
+}
