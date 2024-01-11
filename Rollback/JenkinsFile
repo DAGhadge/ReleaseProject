@@ -1,0 +1,88 @@
+pipeline {
+  agent {
+    docker {
+      image 'ReleaseTeam/rollback-agent:v1'                         //Isolating Distributed Builds
+      args '--user root -v /var/run/docker.sock:/var/run/docker.sock' 
+    }
+  }
+  stages
+  {
+    stage('Parallel Execution') {
+    parallel
+   { 
+    stage('Frontend Service ALB')
+    {
+        environment{
+            LISTENER_ARN='listener_arn'
+            STABLE_TARGET_GROUP_ARN='Blue_version_ARN'
+            GREEN_TARGET_GROUP_ARN='Green_version_ARN'
+        }
+        steps
+        {
+            script
+            {
+            sh """
+               aws elbv2 modify-listener --listener-arn $LISTENER_ARN --default-actions Type=forward,TargetGroupArn=$STABLE_TARGET_GROUP_ARN,
+               ForwardConfig={TargetGroups=[{TargetGroupArn=$STABLE_TARGET_GROUP_ARN, Weight:100},{TargetGroupArn=$GREEN_TARGET_GROUP_ARN,Weight=0}]}
+              """
+            }
+        }
+    }
+    
+    stage('Feed Normalizer')    
+    {
+        environment{
+            LISTENER_ARN='listener_arn'
+            STABLE_TARGET_GROUP_ARN_1='Blue_version_ARN'
+            GREEN_TARGET_GROUP_ARN_1='Green_version_ARN'
+            STABLE_TARGET_GROUP_ARN_2='Blue_version_ARN'
+            GREEN_TARGET_GROUP_ARN_2='Green_version_ARN'
+            STABLE_TARGET_GROUP_ARN_3='Blue_version_ARN'
+            GREEN_TARGET_GROUP_ARN_3='Green_version_ARN'
+            
+        }
+        steps
+        {
+            script
+            {
+               sh """
+               aws elbv2 modify-listener --listener-arn $LISTENER_ARN --default-actions Type=forward,TargetGroupArn=$STABLE_TARGET_GROUP_ARN_1,
+               ForwardConfig={TargetGroups=[{TargetGroupArn=$STABLE_TARGET_GROUP_ARN_1, Weight:33},{TargetGroupArn=$STABLE_TARGET_GROUP_ARN_2,Weight=33},
+               {TargetGroupArn=$STABLE_TARGET_GROUP_ARN_3,Weight=34},{TargetGroupArn=$GREEN_TARGET_GROUP_ARN_1,Weight=0},{TargetGroupArn=$GREEN_TARGET_GROUP_ARN_2,Weight=0},
+               {TargetGroupArn=$GREEN_TARGET_GROUP_ARN_3,Weight=0}]}
+              """
+            }
+        }
+    }
+    stage('Event Management ALB')
+    {
+        environment{
+            LISTENER_ARN='listener_arn'
+            STABLE_TARGET_GROUP_ARN='Blue_version_ARN'
+            GREEN_TARGET_GROUP_ARN='Green_version_ARN'
+        }
+        steps
+        {
+            script
+            {
+            sh """
+               aws elbv2 modify-listener --listener-arn $LISTENER_ARN --default-actions Type=forward,TargetGroupArn=$STABLE_TARGET_GROUP_ARN,
+               ForwardConfig={TargetGroups=[{TargetGroupArn=$STABLE_TARGET_GROUP_ARN, Weight:100},{TargetGroupArn=$GREEN_TARGET_GROUP_ARN,Weight=0}]}
+              """
+            }
+        }
+    }
+    post
+    {
+        success
+        {
+             echo "Pipeline succeeded!"
+        }
+    }
+  }
+    }
+  }
+
+}
+
+
