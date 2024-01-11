@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: Feed-Normalizer-deployment
+spec:
+  replicas: 3  
+  selector:
+    matchLabels:
+      app: FeedNormalizer
+  template:
+    metadata:
+      labels:
+        app: FeedNormalizer
+    spec:
+      containers:
+      - name: feed-Normalizer
+        image: feed-normalizer-image:latest 
+        ports:
+        - containerPort: 82
