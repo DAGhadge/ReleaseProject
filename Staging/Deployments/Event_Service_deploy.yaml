@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: Event-service-deployment
+spec:
+  replicas: 3  
+  selector:
+    matchLabels:
+      app: Event
+  template:
+    metadata:
+      labels:
+        app: Event
+    spec:
+      containers:
+      - name: Event-service
+        image: Event-service:latest 
+        ports:
+        - containerPort: 81
