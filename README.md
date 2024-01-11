@@ -36,7 +36,9 @@ The deployment strategy employed in this scenario is Blue/Green Deployment, with
    - Switches traffic for all ALBs (Frontend, Feed Normalizer, and Event Management) from Blue (old) Deployment to Green (new) Deployment.
    - The pipeline consists of multiple stages targeting each service ALB, allowing parallel execution to ensure a smooth transition from blue to green.
 4. Rollback Pipeline:-
-- The Rollback pipeline will include the traffic routing shifting from all the green deployments to the stable deployments again. 
+- The Rollback pipeline will include the traffic routing shifting from all the green deployments to the stable deployments again.
+
+One improvement we can do here is if we want to monitor a subset of traffic to the green deployment and make sure everything is right and then shift the entire traffic from blue to green, we can according to the requirement, shift the small percentage of traffic and monitor for the new version. We can have ELK agents services running in the services application code, which will be instrumenting the application service code, and forwarding the traffic metrics to APM server which will be forwarding the data to the ELK Server and we can easily monitor on kibana, if the application performance metrics are up to the mark. According to the monitoring data, we can further take the decision to shift the entire traffic to the new deployment. One change we need to address here is that, we need to make sure the old version feed normalizer is sending data to ALB of Event service needs to route traffic only to the old version event service. New version of Feed normalizer traffic needs to be routed only to the new version of event management service. We can make use of the path or header based routing policy here of ALB.
 
 This approach ensures a controlled and validated deployment process with manual verification steps before finalizing the switch to the new version.
 
