@@ -1,0 +1,38 @@
+
+---
+- hosts: tag_Name_Frontend_Server 
+  become: yes  
+
+  vars:
+    frontend_git_tag: "{{ frontend_git_tag }}"  
+
+  tasks:
+    - name: Ensure required packages are installed
+      yum:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - httpd
+        - python3-pip
+      become: yes
+
+    - name: Fetch Frontend code from Git using the provided tag
+      git:
+        repo: https://github.com/your/frontend/repo.git
+        dest: /var/www/html/frontend
+        version: "{{ frontend_git_tag }}"
+      become: yes
+
+    - name: Configure and start httpd service
+      systemd:
+        name: httpd
+        state: started
+        enabled: yes
+      become: yes
+
+  handlers:
+    - name: Reload httpd
+      systemd:
+        name: httpd
+        state: reloaded
+      become: yes
